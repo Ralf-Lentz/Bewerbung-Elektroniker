@@ -83,29 +83,51 @@ window.addEventListener("hashchange", openPrivacyFromHash);
 
 const applyForm = document.querySelector("#applyForm");
 const privacyConsent = document.querySelector("#privacyConsent");
-const submitButton = document.querySelector("#applySubmit");
+const applicationMailLink = document.querySelector("#applicationMailLink");
 const submitGuard = document.querySelector("#submitGuard");
 const submitZone = document.querySelector(".submit-zone");
 const privacyError = document.querySelector("#privacyError");
 const desiredJob = document.querySelector("#desiredJob");
 const desiredJobField = document.querySelector("#desiredJobField");
+const mailFallback = document.querySelector("#mailFallback");
+const copyMailAddress = document.querySelector("#copyMailAddress");
+const copyApplicationData = document.querySelector("#copyApplicationData");
+const copyStatus = document.querySelector("#copyStatus");
+const recipientMail = "perspektiven@fae.energy";
+const mailSubjectText = "Bewerbung Elektroniker FAE";
 const privacyMessage = "Bitte bestätige zuerst, dass du die Datenschutzhinweise gelesen hast.";
+let preparedMailBody = "";
 
 const setPrivacyState = () => {
   const ready = Boolean(privacyConsent?.checked);
-  if (submitButton) submitButton.disabled = !ready;
+  if (applicationMailLink) {
+    applicationMailLink.setAttribute("aria-disabled", ready ? "false" : "true");
+    applicationMailLink.classList.toggle("is-disabled", !ready);
+  }
   submitZone?.classList.toggle("is-ready", ready);
-  if (ready && privacyError) privacyError.textContent = "";
+  if (ready && privacyError) {
+    privacyError.textContent = "";
+    privacyError.classList.remove("is-success");
+  }
 };
 
 const showPrivacyError = () => {
   if (privacyDetails) privacyDetails.open = true;
-  if (privacyError) privacyError.textContent = privacyMessage;
+  if (privacyError) {
+    privacyError.classList.remove("is-success");
+    privacyError.textContent = privacyMessage;
+  }
   privacyConsent?.focus({ preventScroll: false });
 };
 
 setPrivacyState();
 privacyConsent?.addEventListener("change", setPrivacyState);
+applyForm?.addEventListener("input", () => {
+  if (privacyError) {
+    privacyError.textContent = "";
+    privacyError.classList.remove("is-success");
+  }
+});
 submitGuard?.addEventListener("click", showPrivacyError);
 submitGuard?.addEventListener("keydown", event => {
   if (event.key === "Enter" || event.key === " ") {
@@ -281,36 +303,169 @@ document.querySelectorAll("[data-job]").forEach(button => {
   });
 });
 
-applyForm?.addEventListener("submit", event => {
-  event.preventDefault();
+const getFormValue = selector => document.querySelector(selector)?.value.trim() || "";
 
-  if (!privacyConsent?.checked) {
-    showPrivacyError();
-    return;
-  }
+const focusInvalidField = field => {
+  if (!field) return;
+  field.focus({ preventScroll: false });
+  if ("reportValidity" in field) field.reportValidity();
+};
 
-  if (!applyForm.checkValidity()) {
-    applyForm.reportValidity();
-    return;
-  }
+const getFirstInvalidField = () => {
+  if (!applyForm) return null;
+  const requiredFields = [
+    document.querySelector("#firstName"),
+    document.querySelector("#name"),
+    document.querySelector("#email")
+  ];
+  return requiredFields.find(field => field && !field.checkValidity()) || null;
+};
 
-  const formData = new FormData(applyForm);
-  const selectedPosition = formData.get("Gewünschte Stelle") || "Elektroniker / Elektroinstallateur (m/w/d)";
+const buildApplicationMail = () => {
+  const firstName = getFormValue("#firstName");
+  const lastName = getFormValue("#name");
+  const email = getFormValue("#email");
+  const phone = getFormValue("#phone");
+  const region = getFormValue("#region");
+  const currentJob = getFormValue("#job");
+  const experience = getFormValue("#experience");
+  const selectedPosition = desiredJob?.value || "Elektroniker / Elektroinstallateur (m/w/d)";
+  const message = getFormValue("#message");
+  const professionExperience = [currentJob, experience].filter(Boolean).join(" / ");
+
   const lines = [
     "Hallo FAE-Team,",
     "",
-    `ich interessiere mich fuer die Stelle ${selectedPosition}.`,
+    "ich interessiere mich für eine Bewerbung über die FAE-Landingpage.",
     "",
-    ...Array.from(formData.entries()).map(([key, value]) => `${key}: ${value || "-"}`),
+    "Vorname:",
+    firstName || "-",
     "",
-    "Ich freue mich auf die garantierte Rueckmeldung innerhalb von 24 Stunden.",
+    "Name:",
+    lastName || "-",
     "",
-    "Viele Gruesse"
+    "E-Mail:",
+    email || "-",
+    "",
+    "Telefon:",
+    phone || "-",
+    "",
+    "Wohnort / Region:",
+    region || "-",
+    "",
+    "Aktueller Beruf / Erfahrung:",
+    professionExperience || "-",
+    "",
+    "Gewünschte Stelle:",
+    selectedPosition || "-",
+    "",
+    "Nachricht:",
+    message || "-",
+    "",
+    "Datenschutz:",
+    "Ich habe die Datenschutzhinweise zur Bewerbung gelesen und bestätigt.",
+    "",
+    "Viele Grüße",
+    [firstName, lastName].filter(Boolean).join(" ") || "-"
   ];
 
-  const subject = encodeURIComponent(`Bewerbung ${selectedPosition}`);
-  const body = encodeURIComponent(lines.join("\n"));
-  window.location.href = `mailto:perspektiven@fae.energy?subject=${subject}&body=${body}`;
+  preparedMailBody = lines.join("\n");
+  return `mailto:${recipientMail}?subject=${encodeURIComponent(mailSubjectText)}&body=${encodeURIComponent(preparedMailBody)}`;
+};
+
+const canPrepareMailSilently = () => {
+  const invalidField = getFirstInvalidField();
+  return !invalidField && Boolean(privacyConsent?.checked);
+};
+
+const refreshApplicationMailLink = () => {
+  if (!applicationMailLink) return;
+
+  if (canPrepareMailSilently()) {
+    applicationMailLink.href = buildApplicationMail();
+  } else {
+    applicationMailLink.href = `mailto:${recipientMail}`;
+    preparedMailBody = "";
+  }
+};
+
+const showFallback = () => {
+  if (mailFallback) mailFallback.hidden = false;
+  if (privacyError) {
+    privacyError.classList.add("is-success");
+    privacyError.textContent = "Deine E-Mail wurde vorbereitet. Falls sich keine Mail-App öffnet, nutze bitte die Kopierfunktion.";
+  }
+};
+
+const validateApplicationForm = () => {
+  const invalidField = getFirstInvalidField();
+  if (invalidField) {
+    if (privacyError) {
+      privacyError.classList.remove("is-success");
+      privacyError.textContent = "Bitte fülle die Pflichtfelder Vorname, Name und E-Mail aus.";
+    }
+    focusInvalidField(invalidField);
+    return false;
+  }
+
+  if (!privacyConsent?.checked) {
+    showPrivacyError();
+    return false;
+  }
+
+  return true;
+};
+
+applyForm?.addEventListener("input", refreshApplicationMailLink);
+privacyConsent?.addEventListener("change", refreshApplicationMailLink);
+desiredJob?.addEventListener("change", refreshApplicationMailLink);
+
+applicationMailLink?.addEventListener("click", event => {
+  if (!validateApplicationForm()) {
+    event.preventDefault();
+    return;
+  }
+
+  applicationMailLink.href = buildApplicationMail();
+  showFallback();
+});
+
+applyForm?.addEventListener("submit", event => {
+  event.preventDefault();
+  applicationMailLink?.click();
+});
+
+const copyText = async (text, successMessage) => {
+  if (!text) return;
+
+  try {
+    if (navigator.clipboard?.writeText && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+    }
+
+    if (copyStatus) copyStatus.textContent = successMessage;
+  } catch (error) {
+    if (copyStatus) copyStatus.textContent = "Kopieren nicht möglich. Bitte markiere den Text manuell.";
+  }
+};
+
+copyMailAddress?.addEventListener("click", () => {
+  copyText(recipientMail, "E-Mail-Adresse kopiert.");
+});
+
+copyApplicationData?.addEventListener("click", () => {
+  if (!preparedMailBody) buildApplicationMail();
+  copyText(preparedMailBody, "Bewerbungsdaten kopiert.");
 });
 
 const counters = document.querySelectorAll("[data-counter-target]");
