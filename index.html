@@ -440,7 +440,7 @@
           </div>
           <div class="field">
             <label for="phone">Telefon</label>
-            <input id="phone" name="Telefon" type="tel" autocomplete="tel" required>
+            <input id="phone" name="Telefon" type="tel" autocomplete="tel">
           </div>
           <div class="field">
             <label for="email">E-Mail</label>
@@ -492,8 +492,18 @@
           <p class="form-error field-full" id="privacyError" role="alert" aria-live="polite"></p>
 
           <div class="submit-zone field-full">
-            <button class="btn btn-primary apply-submit" id="applySubmit" type="submit" data-magnetic>Jetzt Bewerbung per E-Mail vorbereiten</button>
+            <a class="btn btn-primary apply-submit is-disabled" id="applicationMailLink" href="mailto:perspektiven@fae.energy" aria-disabled="true" data-magnetic>Jetzt Bewerbung per E-Mail vorbereiten</a>
             <button class="submit-guard" id="submitGuard" type="button" aria-label="Datenschutzhinweise bestätigen"></button>
+          </div>
+          <p class="form-note field-full">Falls sich keine E-Mail-App öffnet, kopiere deine Angaben und sende sie direkt an perspektiven@fae.energy.</p>
+          <div class="mail-fallback field-full" id="mailFallback" hidden>
+            <p>Falls sich deine E-Mail-App nicht öffnet, kannst du deine Bewerbung direkt kopieren und an uns senden:</p>
+            <a class="fallback-mail" href="mailto:perspektiven@fae.energy">perspektiven@fae.energy</a>
+            <div class="fallback-actions">
+              <button class="fallback-copy" id="copyMailAddress" type="button">E-Mail-Adresse kopieren</button>
+              <button class="fallback-copy" id="copyApplicationData" type="button">Bewerbungsdaten kopieren</button>
+            </div>
+            <p class="copy-status" id="copyStatus" aria-live="polite"></p>
           </div>
           <p class="form-note field-full">Nach Eingang deiner E-Mail bei perspektiven@fae.energy erhältst du garantiert innerhalb von 24 Stunden eine persönliche Rückmeldung.</p>
         </form>
